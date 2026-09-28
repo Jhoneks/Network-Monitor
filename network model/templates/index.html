@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Network Monitor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Network Monitor</h1>
+        <p class="muted">Devices on your local network, found with ARP.</p>
+      </div>
+      <form method="post" action="/refresh" id="scan-form">
+        <button type="submit" id="scan-button">Scan again</button>
+      </form>
+    </header>
+
+    <section class="stats">
+      <div class="stat">
+        <span class="stat-label">Devices</span>
+        <span class="stat-value">{{ devices|length }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Network</span>
+        <span class="stat-value mono">{{ network }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Last scanned</span>
+        <span class="stat-value">{{ scanned_at }}</span>
+      </div>
+    </section>
+
+    {% if isolation_note %}
+      <div class="notice">{{ isolation_note }}</div>
+    {% endif %}
+
+    {% if devices %}
+      <input type="search" id="filter" placeholder="Filter by IP, MAC, hostname or vendor" aria-label="Filter devices">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>IP address</th><th>MAC address</th><th>Hostname</th><th>Vendor</th></tr>
+          </thead>
+          <tbody id="device-rows">
+            {% for d in devices %}
+              <tr>
+                <td class="mono">{{ d.IP }}</td>
+                <td class="mono">{{ d.MAC }}</td>
+                <td class="{{ 'muted' if d.Hostname == 'Unknown' }}">{{ d.Hostname }}</td>
+                <td class="{{ 'muted' if d.Vendor == 'Unknown' }}">{{ d.Vendor }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p id="no-matches" class="muted" hidden>No devices match that filter.</p>
+    {% else %}
+      <div class="empty">
+        <h2>No devices found</h2>
+        <p class="muted">Make sure Npcap is installed (Windows) and that the app is running as Administrator or root, then scan again.</p>
+      </div>
+    {% endif %}
+  </main>
+
+  <script>
+    // The scan blocks for several seconds, so show that something is happening
+    document.getElementById("scan-form").addEventListener("submit", () => {
+      const button = document.getElementById("scan-button");
+      button.disabled = true;
+      button.textContent = "Scanning…";
+    });
+
+    const filter = document.getElementById("filter");
+    if (filter) {
+      filter.addEventListener("input", () => {
+        const query = filter.value.trim().toLowerCase();
+        let shown = 0;
+        for (const row of document.querySelectorAll("#device-rows tr")) {
+          const match = row.textContent.toLowerCase().includes(query);
+          row.hidden = !match;
+          if (match) shown++;
+        }
+        document.getElementById("no-matches").hidden = shown > 0;
+      });
+    }
+  </script>
+</body>
+</html>
